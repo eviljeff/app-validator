@@ -38,7 +38,7 @@ PERMISSIONS = {
         'device-storage:pictures', 'device-storage:videos',
         'device-storage:music', 'device-storage:sdcard', 'tcp-socket',
         'browser', 'systemXHR', 'audio-channel-notification',
-        'audio-channel-alarm', 'contacts', 'mobilenetwork'
+        'audio-channel-alarm', 'contacts', 'mobilenetwork', 'jesus'
     ]),
 }
 
