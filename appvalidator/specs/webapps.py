@@ -132,6 +132,7 @@ LANGUAGES_PROVIDED_OBJ = {
     }
 }
 
+
 class WebappSpec(Spec):
     """This object parses and subsequently validates webapp manifest files."""
 
@@ -170,7 +171,7 @@ class WebappSpec(Spec):
                      "not_empty": True},
             "role": {"expected_type": types.StringTypes,
                      "values": [u"system", u"input", u"langpack",
-                                u"homescreen"]},
+                                u"homescreen", u"addon"]},
             "description": {"expected_type": types.StringTypes,
                             "max_length": 1024,
                             "not_empty": True},
@@ -209,11 +210,11 @@ class WebappSpec(Spec):
                  "not_empty": True,
                  "child_nodes":
                      {"min_height":
-                          {"expected_type": LITERAL_TYPE,
-                           "process": lambda s: s.process_screen_size},
+                       {"expected_type": LITERAL_TYPE,
+                        "process": lambda s: s.process_screen_size},
                       "min_width":
-                          {"expected_type": LITERAL_TYPE,
-                           "process": lambda s: s.process_screen_size}}},
+                         {"expected_type": LITERAL_TYPE,
+                          "process": lambda s: s.process_screen_size}}},
             "required_features": {"expected_type": list},
             "orientation": {"expected_type": DESCRIPTION_TYPES,
                             "process": lambda s: s.process_orientation},
@@ -244,8 +245,8 @@ class WebappSpec(Spec):
                 "child_nodes": {
                     "*": {
                         "expected_type": dict,
-                        "required_nodes": ["launch_path", "name", "description",
-                                           "types"],
+                        "required_nodes": ["launch_path", "name",
+                                           "description", "types"],
                         "allowed_once_nodes": ["locales"],
                         "child_nodes": INPUT_DEF_OBJ
                     }
@@ -344,7 +345,7 @@ class WebappSpec(Spec):
         if err.get_resource("packaged"):
             # Packaged apps that are not langpacks need a launch path.
             self.SPEC["required_nodes_when"]["launch_path"] = (
-                lambda n: n.get("role") != "langpack"
+                lambda n: n.get("role") not in ["langpack", "addon"]
             )
             # Lang packs need languages-provided and languages-target though.
             self.SPEC["required_nodes_when"]["languages-target"] = (
@@ -401,7 +402,8 @@ class WebappSpec(Spec):
                 return (can_be_absolute if parsed_url.path.startswith("/") else
                         can_be_relative)
 
-            # If the URL is absolute but uses and invalid protocol, return False.
+            # If the URL is absolute but uses and invalid protocol, return
+            # False.
             if parsed_url.scheme.lower() not in ("http", "https", ):
                 return False
 
@@ -420,8 +422,8 @@ class WebappSpec(Spec):
                 err_id=("spec", "webapp", "%s_langpacks" % error_key),
                 error="`%s` is only valid for langpacks." % field,
                 description=["`%s` is only valid for "
-                            "applications with the `langpacks` role." % field,
-                            self.MORE_INFO])
+                             "applications with the `langpacks` role." % field,
+                             self.MORE_INFO])
 
     def process_languages_target(self, node):
         self.validate_langpack_only_field("languages-target")
@@ -466,15 +468,15 @@ class WebappSpec(Spec):
 
         # This test only applies to listed apps.
         if (self.err.get_resource("listed") and
-            any(x.isdigit() for x in node.keys())):
+           any(x.isdigit() for x in node.keys())):
 
             max_size = max(int(x) for x in node.keys() if x.isdigit())
             if max_size < self.MIN_REQUIRED_ICON_SIZE:
                 self.error(
                     err_id=("spec", "webapp", "icon_minsize"),
-                    error="An icon of at least %dx%d pixels must be provided." %
-                            (self.MIN_REQUIRED_ICON_SIZE,
-                             self.MIN_REQUIRED_ICON_SIZE),
+                    error=("An icon of at least %dx%d pixels must be provided."
+                           % (self.MIN_REQUIRED_ICON_SIZE,
+                              self.MIN_REQUIRED_ICON_SIZE)),
                     description="An icon with a minimum size of 128x128 must "
                                 "be provided by each app.")
 
@@ -483,8 +485,8 @@ class WebappSpec(Spec):
             self.error(
                 err_id=("spec", "webapp", "dev_url"),
                 error="Developer URLs must be full or absolute URLs.",
-                description=["`url`s provided for the `developer` element must "
-                             "be full URLs (including the protocol).",
+                description=["`url`s provided for the `developer` element must"
+                             " be full URLs (including the protocol).",
                              "Found: %s" % node,
                              self.MORE_INFO])
 
@@ -515,7 +517,7 @@ class WebappSpec(Spec):
                                  "Found: %s" % item,
                                  self.MORE_INFO])
             elif (item.startswith("http://") and "https://%s" % item[7:] in
-                      constants.DEFAULT_WEBAPP_MRKT_URLS):
+                    constants.DEFAULT_WEBAPP_MRKT_URLS):
                 self.error(
                     err_id=("spec", "webapp", "iaf_bad_mrkt_protocol"),
                     error="Marketplace URL must use HTTPS.",
@@ -526,19 +528,21 @@ class WebappSpec(Spec):
                                  "`https://` to correct this issue.",
                                  "Found: %s" % item,
                                  self.MORE_INFO])
-            elif item == "*" or item in (self.err.get_resource("market_urls") or
-                                         constants.DEFAULT_WEBAPP_MRKT_URLS):
+            elif (item == "*" or
+                  item in (self.err.get_resource("market_urls") or
+                           constants.DEFAULT_WEBAPP_MRKT_URLS)):
                 market_urls.add(item)
 
         if self.err.get_resource("listed") and not market_urls:
             self.error(
                 err_id=("spec", "webapp", "iaf_no_amo"),
-                error="App must allow installs from Marketplace for inclusion.",
+                error="App must allow installs from Marketplace for "
+                      "inclusion.",
                 description="To be included on %s, a webapp needs to include "
                             "%s or '*' (wildcard) as an element in the "
                             "`installs_allowed_from` property." %
-                                (constants.DEFAULT_WEBAPP_MRKT_URLS[0],
-                                 ", ".join(constants.DEFAULT_WEBAPP_MRKT_URLS)))
+                            (constants.DEFAULT_WEBAPP_MRKT_URLS[0],
+                             ", ".join(constants.DEFAULT_WEBAPP_MRKT_URLS)))
 
     def process_messages(self, node):
         for message in node:
@@ -567,8 +571,8 @@ class WebappSpec(Spec):
             self.error(
                 err_id=("spec", "webapp", "screensize_format"),
                 error="`screen_size` values must be numeric.",
-                description=["The values for `min_height` and `min_width` must "
-                             "be strings containing only numbers.",
+                description=["The values for `min_height` and `min_width` must"
+                             " be strings containing only numbers.",
                              "Found: %s" % node,
                              self.MORE_INFO])
 
@@ -587,8 +591,8 @@ class WebappSpec(Spec):
             self.error(
                 err_id=("spec", "webapp", "appcache_not_absolute"),
                 error="`appcache_path` is not an absolute path.",
-                description=["The `appcache_path` must be a full, absolute URL "
-                             "to the application cache manifest.",
+                description=["The `appcache_path` must be a full, absolute URL"
+                             " to the application cache manifest.",
                              "Found: %s" % node,
                              self.MORE_INFO])
 
@@ -598,8 +602,8 @@ class WebappSpec(Spec):
                 err_id=("spec", "webapp", "type_not_known"),
                 error="`type` is not a recognized value",
                 description=["The `type` key does not contain a recognized "
-                             "value. `type` may only contain 'web', 'privileged', "
-                             "or 'certified'.",
+                             "value. `type` may only contain 'web',"
+                             "'privileged', or 'certified'.",
                              "Found value: '%s'" % node,
                              self.MORE_INFO])
 
@@ -715,7 +719,7 @@ class WebappSpec(Spec):
                                      "The value provided was not a recognized "
                                      "value.",
                                      "Recognized values: %s" %
-                                         ", ".join(values),
+                                     ", ".join(values),
                                      self.MORE_INFO])
         else:
             self.error(
@@ -744,7 +748,7 @@ class WebappSpec(Spec):
                                  "`access` node be provided in addition to a "
                                  "`description` node." % permission,
                                  "Access values for this permission: %s" %
-                                     ", ".join(
+                                 ", ".join(
                                          self.PERMISSIONS_ACCESS[permission]),
                                  self.MORE_INFO])
                 continue
@@ -757,7 +761,7 @@ class WebappSpec(Spec):
                     description=["The permission '%s' was given an invalid "
                                  "`access` node value." % permission,
                                  "Valid values: %s" %
-                                     ", ".join(
+                                 ", ".join(
                                          self.PERMISSIONS_ACCESS[permission]),
                                  "Found value: %s" % access_value,
                                  self.MORE_INFO])
@@ -783,7 +787,7 @@ class WebappSpec(Spec):
                     err_id=("spec", "webapp", "origin", banned_origin),
                     error="Origin cannot use `%s` origin." % banned_origin,
                     description=["App origins may not reference `%s`." %
-                                     banned_origin,
+                                 banned_origin,
                                  "Found origin: %s" % node,
                                  self.MORE_INFO])
 
